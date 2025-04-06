@@ -24,6 +24,7 @@ pipeline {
                     echo "Ejecutando SCP..."
                     sshpass -p '${REMOTE_PASSWORD}' scp -v -o StrictHostKeyChecking=no -r css index.html script.js ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}
                     echo "✔️ SCP completado"
+                    sudo systemctl restart nginx.service
                     """
                     sh 'chmod +x deploy.sh'
 
