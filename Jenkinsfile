@@ -1,40 +1,32 @@
 pipeline {
-    agent any  // Usa cualquier agente con SSH/SCP instalado
+    agent {
+        docker {
+            image 'alpine'       // Imagen base (puedes usar una que ya tenga sshpass si prefieres)
+            args '-u root'       // Ejecutar como root para instalar paquetes
+        }
+    }
 
     stages {
-        stage('Verificar/Instalar SSH y SCP') {
+        stage('Instalar sshpass y openssh') {
             steps {
                 sh '''
-                    # Verifica si sshpass está instalado (para automatizar la contraseña)
-                    if ! command -v sshpass &> /dev/null; then
-                        echo "Instalando sshpass..."
-                        # Detecta el gestor de paquetes
-                        if [ -f /etc/debian_version ]; then
-                            apt-get update -qq && apt-get install -y sshpass openssh-client
-                        elif [ -f /etc/redhat-release ]; then
-                            yum install -y sshpass openssh-clients
-                        else
-                            echo "ERROR: Sistema no soportado. Instala sshpass manualmente."
-                            exit 1
-                        fi
-                    fi
+                    apk update
+                    apk add sshpass openssh
                 '''
             }
         }
 
-        stage('Despliegue vía SCP') {
+        stage('Desplegar por SCP') {
             steps {
                 withCredentials([string(credentialsId: 'credencial-ssh', variable: 'SSH_PASSWORD')]) {
-                    sh """
-                        # Usa sshpass para evitar prompts de contraseña
+                    sh '''
                         sshpass -p "$SSH_PASSWORD" scp -o StrictHostKeyChecking=no -r \
                             *.html *.css assets/ js/ images/ \
                             ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}/
 
-                        # Verifica que los archivos se copiaron
-                        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} \
-                            "ls -la ${REMOTE_PATH}"
-                    """
+                        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no \
+                            ${REMOTE_USER}@${REMOTE_HOST} "ls -la ${REMOTE_PATH}"
+                    '''
                 }
             }
         }
@@ -42,10 +34,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Archivos transferidos exitosamente a ${REMOTE_HOST}:${REMOTE_PATH}"
+            echo "✅ Despliegue exitoso a ${REMOTE_HOST}:${REMOTE_PATH}"
         }
         failure {
-            echo "❌ Error en el despliegue. Revisa los logs."
+            echo "❌ Falló el despliegue"
         }
     }
 }
