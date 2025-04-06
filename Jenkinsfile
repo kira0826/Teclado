@@ -10,9 +10,9 @@ pipeline {
                         echo "Instalando sshpass..."
                         # Detecta el gestor de paquetes
                         if [ -f /etc/debian_version ]; then
-                            sudo apt-get update -qq && sudo apt-get install -y sshpass openssh-client
+                            apt-get update -qq && apt-get install -y sshpass openssh-client
                         elif [ -f /etc/redhat-release ]; then
-                            sudo yum install -y sshpass openssh-clients
+                            yum install -y sshpass openssh-clients
                         else
                             echo "ERROR: Sistema no soportado. Instala sshpass manualmente."
                             exit 1
