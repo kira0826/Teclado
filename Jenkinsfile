@@ -1,32 +1,24 @@
 pipeline {
-    agent {
-        docker {
-            image 'alpine'       // Imagen base (puedes usar una que ya tenga sshpass si prefieres)
-            args '-u root'       // Ejecutar como root para instalar paquetes
-        }
-    }
+    agent any
 
     stages {
-        stage('Instalar sshpass y openssh') {
+        stage('Preparar artefactos') {
             steps {
-                sh '''
-                    apk update
-                    apk add sshpass openssh
-                '''
+                echo "Listando archivos que se copiarán:"
+                sh 'ls -la'
             }
         }
 
-        stage('Desplegar por SCP') {
+        stage('Copiar archivos a servidor remoto') {
             steps {
-                withCredentials([string(credentialsId: 'credencial-ssh', variable: 'SSH_PASSWORD')]) {
-                    sh '''
-                        sshpass -p "$SSH_PASSWORD" scp -o StrictHostKeyChecking=no -r \
-                            *.html *.css assets/ js/ images/ \
-                            ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}/
+                script {
+                    echo "Copiando archivos a ${env.REMOTE_USER}@${env.REMOTE_HOST}:${env.REMOTE_PATH}"
 
-                        sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no \
-                            ${REMOTE_USER}@${REMOTE_HOST} "ls -la ${REMOTE_PATH}"
-                    '''
+                    writeFile file: 'deploy.sh', text: """#!/bin/bash
+                    sshpass -p "${REMOTE_PASSWORD}" scp -o StrictHostKeyChecking=no -r css index.html script.js ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}
+                    """
+                    sh 'chmod +x deploy.sh'
+                    sh './deploy.sh'
                 }
             }
         }
@@ -34,10 +26,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Despliegue exitoso a ${REMOTE_HOST}:${REMOTE_PATH}"
+            echo '✔️ Archivos copiados con éxito.'
         }
         failure {
-            echo "❌ Falló el despliegue"
+            echo '❌ Falló la copia de archivos.'
         }
     }
 }
