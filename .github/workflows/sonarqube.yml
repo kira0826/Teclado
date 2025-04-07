@@ -20,7 +20,7 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
           
-            
+
           
       - name: Setup SonarQube Scanner
         uses: SonarSource/sonarqube-scan-action@master
@@ -32,4 +32,5 @@ jobs:
           args: >
             -Dsonar.projectKey=TecladoAnal
             -Dsonar.sources=.
+            -Dsonar.scanner.javaAdditionalOpts="--add-opens java.base/java.lang=ALL-UNNAMED"
             
