@@ -234,4 +234,4 @@ jobs:
 > 
 > 
 > As a workaround, we manually extract key metrics from the SonarQube API response and format them into a Markdown comment, which is then posted using the `marocchino/sticky-pull-request-comment` GitHub Action.
->
+>   
