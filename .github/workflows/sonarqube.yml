@@ -3,23 +3,24 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   sonar:
     name: Run SonarQube
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Asegura análisis profundo con historial
           fetch-depth: 0
-          
+
       - name: Set up JDK 
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '11'
-           
+
       - name: Setup SonarQube Scanner
         uses: SonarSource/sonarqube-scan-action@v5.1.0  
         env:
@@ -30,4 +31,42 @@ jobs:
           args: >
             -Dsonar.projectKey=TecladoAnal
             -Dsonar.sources=.
-            
+
+      - name: Install jq (for parsing JSON)
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Get SonarQube analysis report
+        id: sonar-report
+        run: |
+          PROJECT_KEY="TecladoAnal"
+          SONAR_URL="${{ secrets.SONAR_HOST }}"
+          SONAR_TOKEN="${{ secrets.SONAR_TOKEN }}"
+
+          RESPONSE=$(curl -s -u $SONAR_TOKEN: "$SONAR_URL/api/measures/component?component=$PROJECT_KEY&metricKeys=code_smells,bugs,vulnerabilities,coverage,duplicated_lines_density")
+          echo "$RESPONSE" > sonar-report.json
+
+          # Parse JSON with jq
+          BUGS=$(jq -r '.component.measures[] | select(.metric=="bugs") | .value' sonar-report.json)
+          CODE_SMELLS=$(jq -r '.component.measures[] | select(.metric=="code_smells") | .value' sonar-report.json)
+          VULNERABILITIES=$(jq -r '.component.measures[] | select(.metric=="vulnerabilities") | .value' sonar-report.json)
+          COVERAGE=$(jq -r '.component.measures[] | select(.metric=="coverage") | .value' sonar-report.json)
+          DUPLICATION=$(jq -r '.component.measures[] | select(.metric=="duplicated_lines_density") | .value' sonar-report.json)
+
+          REPORT="🚨 **SonarQube Report**
+          - 🐞 Bugs: $BUGS
+          - 💨 Code Smells: $CODE_SMELLS
+          - 🔐 Vulnerabilities: $VULNERABILITIES
+          - 🧪 Coverage: $COVERAGE%
+          - 📦 Duplication: $DUPLICATION%"
+
+          echo "$REPORT"
+          echo "report<<EOF" >> $GITHUB_OUTPUT
+          echo "$REPORT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: sonar-report
+          message: ${{ steps.sonar-report.outputs.report }}
