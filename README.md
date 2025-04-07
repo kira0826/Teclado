@@ -1,3 +1,5 @@
+# Connection with other projects
+
 ### Infrastructure Management
 
 The infrastructure is managed using **Terraform** with the **Azurerm** provider. It is organized into three reusable and modular components:
@@ -61,7 +63,7 @@ All services are fully automated for out-of-the-box functionality.
 📁 [GitHub – kira0826/ansible-pipeline](https://github.com/kira0826/ansible-pipeline)
 
 ---
-# Frontend Deployment and Jenkins Integration
+# Frontend Deployment and Jenkins Integration Segment
 
 The frontend repository contains all the **static files** that are deployed to the **frontend virtual machine** using **Nginx**. It also includes the `Jenkinsfile`, which defines the Jenkins job executed by the Jenkins server. The pipeline looks as follows:
 
